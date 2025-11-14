@@ -62,6 +62,8 @@ class Entity:
                     return True
                 else:
                     return False
+            case _:
+                return False
                 
     def move_entity(self, move:str) -> bool:
         if not self.check_valid_move(move):
@@ -147,7 +149,7 @@ def nextEnemyPos(current_pos):
 
 count = 0
 last_frame = time.time()
-frame_times = [60 for i in range(5)]
+frame_times = [60.0 for i in range(5)]
 
 player = Player(BLUE, player_screen_pos, player_grid_pos, 1)
 enemies = [Enemy(RED, enemy_screen_pos, enemy_grid_pos, 1)]
