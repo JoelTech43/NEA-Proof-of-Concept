@@ -13,6 +13,7 @@ class Maze:
         self.maze_array = maze_array
         self.player = player
         self.enemies = enemies
+        self.enemy_positions = list()
 
         #basically determines the start coordinate of the centred maze.
         self.left_pad = (screen_dimensions[1]-(self.cols*self.cell_height))//2
@@ -51,9 +52,33 @@ class Maze:
                 current_cell_screen_pos = (self.left_pad+(self.cell_height*(collInd+1)), self.top_pad+(self.cell_height*(rowInd+1)))
                 self.draw_cell_walls(canvas, current_cell_screen_pos, self.wall_thickness, self.wall_colour, cell_walls)
 
-        self.player.draw()
-
+        self.player.draw(canvas)
+        for enemy in self.enemies:
+            enemy.draw(canvas)
+    
+    def check_player_enemy_coll(self) -> bool:
+        for enemy in self.enemies:
+            if self.player.maze_pos == enemy.maze_pos:
+                return True
+        return False
+    
+    #takes current maze_pos of Entity and move as a tuple (x,y) where x and y can be -1, 0 or 1
+    def check_valid_move(self, maze_pos: tuple, move: tuple) -> bool:
+        cell_walls = self.maze_array[maze_pos[1]][maze_pos[0]]
+        new_pos = tuple([maze_pos[i]+move[i] for i in range(2)])
+        match move:
+            case (-1, 0): #left
+                return cell_walls[0] == 0
+            case (1, 0): #right
+                return cell_walls[2] == 0
+            case (0, 1): #up
+                return cell_walls[1] == 0
+            case (0, -1): #down
+                return cell_walls[3] == 0
+            case _:
+                return False
 class Entity:
+    #maze_pos is tuple of index in maze_array of Entity. Top-left is (0,0)
     def __init__(self, maze_pos: tuple, colour: tuple, maze: Maze) -> None:
         self.maze_pos = maze_pos
         self.colour = colour
@@ -82,3 +107,4 @@ class Player(Entity):
 class Enemy(Entity):
     def __init__(self, maze_pos: tuple, colour: tuple, maze: Maze) -> None:
         super().__init__(maze_pos, colour, maze)
+    
