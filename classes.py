@@ -1,7 +1,7 @@
 import pygame
 
 class Maze:
-    def __init__(self, screen_dimensions: tuple, maze_dimensions: tuple, cell_height: int, wall_thickness: int, wall_colour: tuple, maze_array: list, player: Player, enemies: list) -> None:
+    def __init__(self, screen_dimensions: tuple, maze_dimensions: tuple, cell_height: int, wall_thickness: int, wall_colour: tuple, maze_array: list, player: Player, enemies: list) -> None: # type: ignore
         self.maze_dimensions = maze_dimensions
         self.rows = maze_dimensions[0]
         self.cols = maze_dimensions[1]
@@ -14,6 +14,9 @@ class Maze:
         self.player = player
         self.enemies = enemies
         self.enemy_positions = list()
+
+        for enemy in enemies:
+            self.enemy_positions.append(enemy.get_maze_pos())
 
         #basically determines the start coordinate of the centred maze.
         self.left_pad = (screen_dimensions[1]-(self.cols*self.cell_height))//2
@@ -56,25 +59,29 @@ class Maze:
         for enemy in self.enemies:
             enemy.draw(canvas)
     
-    def check_player_enemy_coll(self) -> bool:
+    def update_enemy_positions(self):
         for enemy in self.enemies:
-            if self.player.maze_pos == enemy.maze_pos:
-                return True
-        return False
-    
+            self.enemy_positions.append(enemy.get_maze_pos())
+
+    def check_player_enemy_coll(self, pos: tuple = (-1,-1)) -> bool:
+        if pos == (-1,-1):
+            return self.player.get_maze_pos() in self.enemy_positions
+        else:
+            return pos in self.enemy_positions
+
     #takes current maze_pos of Entity and move as a tuple (x,y) where x and y can be -1, 0 or 1
     def check_valid_move(self, maze_pos: tuple, move: tuple) -> bool:
         cell_walls = self.maze_array[maze_pos[1]][maze_pos[0]]
         new_pos = tuple([maze_pos[i]+move[i] for i in range(2)])
         match move:
             case (-1, 0): #left
-                return cell_walls[0] == 0
+                return cell_walls[0] == 0 and not self.check_player_enemy_coll(new_pos)
             case (1, 0): #right
-                return cell_walls[2] == 0
+                return cell_walls[2] == 0 and not self.check_player_enemy_coll(new_pos)
             case (0, 1): #up
-                return cell_walls[1] == 0
+                return cell_walls[1] == 0 and not self.check_player_enemy_coll(new_pos)
             case (0, -1): #down
-                return cell_walls[3] == 0
+                return cell_walls[3] == 0 and not self.check_player_enemy_coll(new_pos)
             case _:
                 return False
 class Entity:
@@ -99,6 +106,9 @@ class Entity:
     def draw(self, canvas):
         pygame.draw.rect(canvas, self.colour, pygame.Rect(self.screen_pos[0], self.screen_pos[1], self.sprite_height, self.sprite_height))
         pygame.display.update()
+
+    def get_maze_pos(self):
+        return self.maze_pos
 
 class Player(Entity):
     def __init__(self, maze_pos: tuple, colour: tuple, maze: Maze) -> None:
