@@ -1,9 +1,10 @@
+import time
 maze_layout = [
-    [(True,True,False,True), (False,True,False,True), (False,False,True,False), (True,True,False,True), (False,True,True,False)], #each list is a row, each tuple is a cell.
-    [(True,True,False,False), (False,True,True,False), (True,False,False,True), (False,True,False,True), (False,False,True,False)], #True = wall, False = gap. Truest value = left, 2nd value = top, 3rd value = right, 4th value = down.
+    [(True,True,False,True), (False,True,False,True), (False,True,True,False), (True,True,False,True), (False,True,True,False)], #each list is a row, each tuple is a cell.
+    [(True,True,False,False), (False,True,True,False), (True,False,False,True), (False,True,False,True), (False,False,True,False)], #True = wall, False = gap. 1st value = left, 2nd value = top, 3rd value = right, 4th value = down.
     [(True,False,True,True), (True,False,False,False), (False,True,False,True), (False,True,False,False), (False,False,True,False)], #Need the whole right and bottom of grid.
     [(True,True,False,False), (False,False,True,True), (True,True,False,True), (False,False,True,True), (True,False,True,False)],
-    [(True,False,False,True), (False,True,False,True), (False,True,True,False), (True,True,False,True), (False,False,True,True)]
+    [(True,False,False,True), (False,True,False,True), (False,True,True,True), (True,True,False,True), (False,False,True,True)]
 ]
 
 class Cell:
@@ -29,6 +30,9 @@ class Cell:
     def set_prev_cell(self, cell) -> None:
         self.prev_cell = cell
     
+    def get_prev_cell(self):
+        return self.prev_cell
+    
     def get_walls(self):
         return self.walls
     
@@ -40,6 +44,9 @@ class Cell:
     
     def get_overall_estimate(self):
         return self.overall_dist_estimate
+    
+    def get_maze_pos(self):
+        return self.maze_pos
     
     def reset_estimates(self):
         self.prev_cell = None
@@ -99,36 +106,40 @@ class Enemy(Entity):
                 considering_coord = (visiting_cell_coord[0]-1, visiting_cell_coord[1])
                 considering_cell_coords.append(considering_coord)
             
-            if walls[0] is False:
+            if walls[1] is False:
                 considering_coord = (visiting_cell_coord[0], visiting_cell_coord[1]-1)
                 considering_cell_coords.append(considering_coord)
             
-            if walls[0] is False:
+            if walls[2] is False:
                 considering_coord = (visiting_cell_coord[0]+1, visiting_cell_coord[1])
                 considering_cell_coords.append(considering_coord)
             
-            if walls[0] is False:
+            if walls[3] is False:
                 considering_coord = (visiting_cell_coord[0], visiting_cell_coord[1]+1)
                 considering_cell_coords.append(considering_coord)
             
             for considering_coord in considering_cell_coords:
-                potential.append(considering_coord)
-                considering_cell = cells[considering_coord[1]][considering_coord[0]]
+                if considering_coord not in visited: #don't attempt to update visited cells as they already have shortest route
+                    potential.append(considering_coord)
+                    considering_cell = cells[considering_coord[1]][considering_coord[0]]
 
-                start_dist = visiting_cell.get_start_dist() + 1
-                heuristic_estimate = abs(dest_coord[0]-considering_coord[0])+abs(dest_coord[1]-considering_coord[1])
+                    start_dist = visiting_cell.get_start_dist() + 1
+                    heuristic_estimate = abs(dest_coord[0]-considering_coord[0])+abs(dest_coord[1]-considering_coord[1])
 
-                updated = considering_cell.update_estimate(start_dist, heuristic_estimate)
+                    updated = considering_cell.update_estimate(start_dist, heuristic_estimate)
 
-                if updated:
-                    considering_cell.set_prev_cell(visiting_cell)
+                    if updated:
+                        considering_cell.set_prev_cell(visiting_cell)
 
-                potential.sort(key=lambda coord: (cells[coord[1]][coord[0]].get_overall_estimate(), cells[coord[1]][coord[0]].get_heuristic_estimate())) #sort primarily by total estimate, then by heuristic estimate.
+            #potential = list(set(potential)-set(visited))
+            potential = list(set(potential))
 
-                visiting_cell_coord = potential[0]
-                del potential[0]
+            potential.sort(key=lambda coord: (cells[coord[1]][coord[0]].get_overall_estimate(), cells[coord[1]][coord[0]].get_heuristic_estimate())) #sort primarily by total estimate, then by heuristic estimate.
 
-                visiting_cell = cells[visiting_cell_coord[1]][visiting_cell_coord[0]]
+            visiting_cell_coord = potential[0]
+            del potential[0]
+
+            visiting_cell = cells[visiting_cell_coord[1]][visiting_cell_coord[0]]
         
         #out of loop so visiting_cell is destination
         route = [] #list to hold all coords along shortest route
@@ -138,7 +149,7 @@ class Enemy(Entity):
             visiting_cell = visiting_cell.get_prev_cell() #move to previous cell
         
         #route list now starts with destination and ends with start
-        route.reverse() #now starts at start and ends at end.
+        route.reverse() #now starts at start and ends at end. DOESN'T INCLUDE START CELL.
         return route
 
 class LevelHandler:
@@ -161,4 +172,6 @@ level_handler = LevelHandler("placeholder", [])
 level_handler.create_enemy()
 level_handler.create_maze()
 
+start = time.time()
 print(level_handler.get_enemies()[0].find_shortest_route((2,4)))
+print(time.time()-start)
